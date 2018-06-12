@@ -2,7 +2,9 @@
 
 namespace PhpMaze\Components;
 
-class Edge {
+use PhpMaze\DBObject;
+
+class Edge extends DBObject {
     static public function hello() {
         echo "goodbye<br>";
     }

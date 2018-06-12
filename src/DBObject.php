@@ -2,7 +2,7 @@
 
 namespace PhpMaze;
 
-class DBObject {
+abstract class DBObject {
   
   protected $id;
   
@@ -21,6 +21,27 @@ class DBObject {
       $object->$method($value);
     }
     return $object;
+  }
+
+  // CRUD
+  
+  static public function insert_into_table() {
+    global $cxn;
+    
+    $sql[] = "INSERT INTO ". $this->table;
+    $sql[] = "(" . implode(',', $this->fields) . ")";
+    
+    foreach ($fields as $field) {
+      $params[$field] = $this->$field;
+      $field_list[] = ":{$field}";
+    }
+    $sql[] = "VALUES (" . implode(',',$field_list). ")";
+    
+    $query = $cxn->prepare(implode(' ', $sql));
+    $query->execute($params);
+    $this->id = $cxn->lastInsertId();
+    
+    return $query->rowCount();
   }
   
   static public function fetch_all() {
@@ -51,21 +72,32 @@ class DBObject {
     $row = $sql->fetch(\PDO::FETCH_ASSOC);
     
     return static::create_object($row);
-    
   }
   
-  static public function insert_into_table(array $params) {
+  public function update() {
     global $cxn;
     
-    foreach ($params as $key => $values) {
-      $col[] = $key;
+    $sql[] = "UPDATE {$this->table} SET";
+    foreach ($this->fields as $field) {
+      $sql[] = $field . " = :" . $field;
+      $params[$field] = $this->$field;
     }
+    $sql[] = "WHERE id = :id";
+    $params['id'] = $this->id;
     
-    $sql = $cxn->prepare(
-      "INSERT INTO " . static::$table ." VALUES 
-      (" . implode(',', $col) .")" 
-    );
+    $query = $cxn->prepare(implode(' ', $sql));
+    $query->execute($params);
     
-    return $cxn->lastInsertId();
+    return $query->rowCount(); 
   }
+  
+  public function delete() {
+    global $cxn;
+    
+    $sql = "DELETE FROM {$this->table} WHERE id = {$this->id}";
+    $query = $cxn->query($sql);
+    
+    return $query->rowCount();
+  }
+  
 }
